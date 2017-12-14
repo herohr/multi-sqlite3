@@ -23,7 +23,7 @@ class Connection:
         p_length = struct.pack("!Q", len(parameters_data))
         data = condition + sql_length + p_length + sql + parameters_data
         self.socket.sendall(data)
-        self.recv_result()
+        return self.recv_result()
 
     def commit(self):
         condition = b"2"
@@ -41,8 +41,8 @@ class Connection:
             result = json.loads(data.decode())
         else:
             result = None
-        print(result)
         return condition, result
+
 
 def recv_all(sock, length):
     data = b""
@@ -55,5 +55,12 @@ def recv_all(sock, length):
 
 conn = Connection("localhost", 7887)
 
-conn.execute("SELECT * FROM fuck")
-conn.commit()
+conn.execute("CREATE TABLE fuck(id int, name text, age int);")
+
+conn.execute("INSERT INTO fuck VALUES(1, '骚猪', 19)")
+conn.execute("INSERT INTO fuck VALUEs(2, '骚鸡', 20)")
+
+for i in conn.execute("SELECT * from fuck"):
+    print(i)
+
+

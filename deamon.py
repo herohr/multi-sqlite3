@@ -6,6 +6,7 @@ from threading import Thread
 import json
 import struct
 import logging
+import time
 
 "condition(1byte)|length(8byte)|result"
 struct_str = "1sQ"
@@ -82,18 +83,20 @@ class DB:
         while True:
             condition, sql, parameters, sock = self.task_queue.get()
             if condition == b"0":  # close
-                res = self.close()
+                res = self.close(sock)
             elif condition == b"1":  # execute
                 res = self.execute(sql, parameters or None)
             else:  # commit
                 res = self.commit()
             self.thread_pool.submit(DB.send_result, sock, res)
 
-    def close(self):
-        # self.close()
-        while self.task_queue.empty():
-            pass
-        self.connection.close()
+    def close(self, sock):
+        def defer_close():
+            while self.connections_dict[sock]:
+                time.sleep(1)
+            del self.connections_dict[sock]
+            sock.close()
+        self.thread_pool.submit(defer_close)
         return b"1", b"connection closed"
 
     def execute(self, sql, parameters=None):
